@@ -25,39 +25,48 @@ public:
         VectorXd NoBasic_Index(n-m);
         for (int i = 0; i < m; i++)
         {
-            Basic_Index(i) = i;
-            B.col(i) = A.col(i);
-            cB(i) = c(i);
+            Basic_Index(i) = n-m+i;
+            B.col(i) = A.col(n-m+i);
+            cB(i) = c(n-m+i);
         }
         for (int i = 0; i < n-m; i++)
         {
-            NoBasic_Index(i) = m+i;
-            N.col(i) = A.col(m+i);
-            cNB(i) = c(m+i);
+            NoBasic_Index(i) = i;
+            N.col(i) = A.col(i);
+            cNB(i) = c(i);
         }
         MatrixXd xB = B.inverse() * b;
         // if best
-        while (true)
+        for (int i = 0; i < 10; i++) // ten times...
         {
             MatrixXd w = (B.adjoint()).inverse() * cB;
             MatrixXd z = w.adjoint() * N;
             int p = -1; // the index to get into basic
+            double minx = 0;
             for (int j = 0; j < n-m; j++)
             {
-                if(cNB(j) - z(j) < 0)
+                if (cNB(j) - z(j) < minx)
                 {
                     p = j;
-                    break;
+                    minx = cNB(j) - z(j);
                 }
             }
             if (p == -1)
             {
                 //return xB;
-                MatrixXd X(1, n);
-                for(int j = 0; j < m; j++)
+                MatrixXd X(n, 1);
+                for (int j = 0; j < m; j++)
                     X(Basic_Index(j)) = xB(j);
-                for(int j = 0; j < n-m; j++)
+                for (int j = 0; j < n-m; j++)
                     X(NoBasic_Index(j)) = 0;
+
+                // check...
+                double minn = X.minCoeff();
+                if (minn < 0)
+                    break;
+                MatrixXd bb = A*X;
+                if (bb != b)
+                    break;
 
                 return X;
             }
@@ -72,11 +81,7 @@ public:
                 }
             }
             if (!ifok) // no result
-            {
-                MatrixXd emmm(1, 1);
-                emmm << 0;
-                return emmm;
-            }
+                break;
             int r, c;
             double delta = (xB.cwiseQuotient(yp)).minCoeff(&r, &c);
             xB = xB - delta * yp;
@@ -91,6 +96,9 @@ public:
             B.col(r) = N.col(p);
             N.col(p) = B_o;
         }
+        MatrixXd emmm(1, 1);
+        emmm << 0;
+        return emmm;
     }
 private:
     MatrixXd A;
